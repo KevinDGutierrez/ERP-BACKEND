@@ -8,11 +8,18 @@ class AccountModel {
      */
     static async getAll(companyId) {
         if (!companyId) throw new Error('Se requiere companyId');
+        
+        // Obtenemos las cuentas filtradas por empresa
         const snapshot = await db.collection(ACCOUNTS_COLLECTION)
             .where('companyId', '==', companyId)
-            .orderBy('code')
             .get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Mapeamos los datos
+        const accounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Ordenamos en memoria para evitar el error de "index required" de Firestore temporalmente
+        // Nota: Es recomendable crear el índice compuesto en la consola de Firebase para mejor rendimiento.
+        return accounts.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
     }
 
     /**
