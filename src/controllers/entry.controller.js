@@ -35,7 +35,11 @@ const getDailyBook = async (req, res) => {
         const entries = await EntryModel.getDailyBook(companyId, startDate, endDate);
         res.json(entries);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error in getDailyBook:', error);
+        res.status(500).json({ 
+            message: 'Error al obtener el libro diario. Si es la primera vez, verifica la consola del servidor para crear el índice de Firestore necesario.',
+            details: error.message 
+        });
     }
 };
 

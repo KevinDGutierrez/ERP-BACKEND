@@ -7,7 +7,7 @@ const { isAdmin } = require('../middlewares/auth.middleware');
 router.use(isAdmin);
 
 router.get('/users', adminController.getUsers);
-router.put('/users/:uid/status', adminController.approveUser);
+router.patch('/users/:uid/approve', adminController.approveUser);
 router.post('/users/:uid/reject', adminController.rejectUser);
 
 module.exports = router;

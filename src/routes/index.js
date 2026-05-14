@@ -6,6 +6,7 @@ const entryRoutes = require('./entry.routes');
 const transactionRoutes = require('./transaction.routes');
 const adminRoutes = require('./admin.routes');
 const accountingRoutes = require('./accounting.routes');
+const companyRoutes = require('./company.routes');
 const { authenticate } = require('../middlewares/auth.middleware');
 
 // Aplicar autenticación global
@@ -16,6 +17,7 @@ router.use('/accounts', accountRoutes);
 router.use('/entries', entryRoutes);
 router.use('/transactions', transactionRoutes);
 router.use('/accounting', accountingRoutes);
+router.use('/companies', companyRoutes);
 
 // Rutas administrativas (Super Admin)
 router.use('/admin', adminRoutes);

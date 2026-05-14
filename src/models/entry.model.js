@@ -46,23 +46,31 @@ class EntryModel {
     static async getDailyBook(companyId, startDate, endDate) {
         if (!companyId) throw new Error('Se requiere companyId');
         
-        let query = db.collection(ENTRIES_COLLECTION)
-            .where('companyId', '==', companyId)
-            .orderBy('date', 'asc');
-
-        if (startDate && endDate) {
-            query = query.where('date', '>=', startDate).where('date', '<=', endDate);
-        }
+        // Filtramos solo por companyId en Firestore para evitar la necesidad de un índice compuesto
+        const query = db.collection(ENTRIES_COLLECTION)
+            .where('companyId', '==', companyId);
 
         const snapshot = await query.get();
-        const entries = [];
+        let entries = [];
 
-        for (const doc of snapshot.docs) {
-            const data = doc.data();
-            const detailsSnapshot = await doc.ref.collection('details').get();
+        for (const docSnap of snapshot.docs) {
+            const data = docSnap.data();
+            
+            // Filtrado manual por fecha en memoria
+            if (startDate && data.date < startDate) continue;
+            if (endDate && data.date > endDate) continue;
+
+            const detailsSnapshot = await docSnap.ref.collection('details').get();
             const details = detailsSnapshot.docs.map(d => d.data());
-            entries.push({ id: doc.id, ...data, details });
+            entries.push({ id: docSnap.id, ...data, details });
         }
+
+        // Ordenar por fecha ascendentemente en memoria
+        entries.sort((a, b) => {
+            if (a.date < b.date) return -1;
+            if (a.date > b.date) return 1;
+            return 0;
+        });
 
         return entries;
     }
