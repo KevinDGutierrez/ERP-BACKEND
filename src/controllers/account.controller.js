@@ -21,12 +21,14 @@ const createAccount = async (req, res) => {
             return res.status(403).json({ message: 'No puedes crear cuentas sin una empresa asignada' });
         }
 
-        const { code, name, type, nature } = req.body;
+        const { code, name, type, nature, parentId } = req.body;
         
-        // Validar si el código ya existe en ESTA empresa
-        const existing = await AccountModel.getByCode(code, companyId);
-        if (existing) {
-            return res.status(400).json({ message: 'El código de cuenta ya existe en tu catálogo' });
+        // Validar si el código ya existe (solo si el usuario lo envió, aunque ahora será automático)
+        if (code) {
+            const existing = await AccountModel.getByCode(code, companyId);
+            if (existing) {
+                return res.status(400).json({ message: 'El código de cuenta ya existe en tu catálogo' });
+            }
         }
 
         const id = await AccountModel.create({ 
@@ -34,6 +36,7 @@ const createAccount = async (req, res) => {
             name, 
             type, 
             nature,
+            parentId,
             companyId 
         });
         res.status(201).json({ id, message: 'Cuenta creada exitosamente' });

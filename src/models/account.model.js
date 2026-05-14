@@ -47,14 +47,74 @@ class AccountModel {
     }
 
     /**
+     * Genera el siguiente código disponible para una subcuenta
+     */
+    static async generateNextCode(companyId, type, parentId = null) {
+        let parentCode = '';
+        if (parentId) {
+            const parent = await this.getById(parentId);
+            if (parent) parentCode = parent.code;
+        } else {
+            // Códigos base por tipo
+            const baseCodes = {
+                'ACTIVO': '1',
+                'PASIVO': '2',
+                'PATRIMONIO': '3',
+                'INGRESO': '4',
+                'COSTO': '5',
+                'GASTO': '6'
+            };
+            parentCode = baseCodes[type.toUpperCase().replace(/S$/, '')] || '9';
+        }
+
+        // Buscar cuentas que cuelguen directamente de este padre
+        const snapshot = await db.collection(ACCOUNTS_COLLECTION)
+            .where('companyId', '==', companyId)
+            .where('code', '>=', parentCode + '.')
+            .where('code', '<', parentCode + '.\uf8ff')
+            .get();
+
+        const siblings = snapshot.docs
+            .map(doc => doc.data().code)
+            .filter(code => {
+                const parentSegments = parentCode.split('.').length;
+                const segments = code.split('.').length;
+                return segments === parentSegments + 1;
+            });
+
+        if (siblings.length === 0) {
+            return `${parentCode}.01`;
+        }
+
+        // Obtener el último segmento más alto
+        const lastSegments = siblings.map(code => {
+            const parts = code.split('.');
+            return parseInt(parts[parts.length - 1]);
+        });
+
+        const nextNumber = Math.max(...lastSegments) + 1;
+        const formattedNumber = nextNumber.toString().padStart(2, '0');
+        
+        return `${parentCode}.${formattedNumber}`;
+    }
+
+    /**
      * Crea una nueva cuenta asociada a una empresa
      */
     static async create(accountData) {
-        const { companyId } = accountData;
+        const { companyId, type, parentId } = accountData;
         if (!companyId) throw new Error('Se requiere companyId para crear cuenta');
         
+        let { code } = accountData;
+        
+        // Si no viene código, lo generamos automáticamente
+        if (!code) {
+            code = await this.generateNextCode(companyId, type, parentId);
+        }
+
         const docRef = await db.collection(ACCOUNTS_COLLECTION).add({
             ...accountData,
+            code,
             balance: 0,
             createdAt: new Date().toISOString()
         });
