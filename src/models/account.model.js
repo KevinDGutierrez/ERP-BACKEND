@@ -66,15 +66,15 @@ class AccountModel {
      */
     static async seed(companyId) {
         const defaultAccounts = [
-            { code: '1', name: 'ACTIVO', type: 'debit', level: 1 },
-            { code: '1.1', name: 'ACTIVO CORRIENTE', type: 'debit', level: 2 },
-            { code: '1.1.01', name: 'Caja y Bancos', type: 'debit', level: 3 },
-            { code: '1.1.01.01', name: 'Caja General', type: 'debit', level: 4 },
-            { code: '2', name: 'PASIVO', type: 'credit', level: 1 },
-            { code: '2.1', name: 'PASIVO CORRIENTE', type: 'credit', level: 2 },
-            { code: '3', name: 'PATRIMONIO', type: 'credit', level: 1 },
-            { code: '4', name: 'INGRESOS', type: 'credit', level: 1 },
-            { code: '5', name: 'GASTOS', type: 'debit', level: 1 },
+            { code: '1', name: 'ACTIVO', type: 'ACTIVO', nature: 'DEUDORA', level: 1 },
+            { code: '1.1', name: 'ACTIVO CORRIENTE', type: 'ACTIVO', nature: 'DEUDORA', level: 2 },
+            { code: '1.1.01', name: 'Caja y Bancos', type: 'ACTIVO', nature: 'DEUDORA', level: 3 },
+            { code: '1.1.01.01', name: 'Caja General', type: 'ACTIVO', nature: 'DEUDORA', level: 4 },
+            { code: '2', name: 'PASIVO', type: 'PASIVO', nature: 'ACREEDORA', level: 1 },
+            { code: '2.1', name: 'PASIVO CORRIENTE', type: 'PASIVO', nature: 'ACREEDORA', level: 2 },
+            { code: '3', name: 'PATRIMONIO', type: 'PATRIMONIO', nature: 'ACREEDORA', level: 1 },
+            { code: '4', name: 'INGRESOS', type: 'INGRESO', nature: 'ACREEDORA', level: 1 },
+            { code: '5', name: 'GASTOS', type: 'GASTO', nature: 'DEUDORA', level: 1 },
         ];
 
         const batch = db.batch();
