@@ -8,6 +8,9 @@ class EntryModel {
      * para asegurar la integridad de los saldos.
      */
     static async create(entryData, details) {
+        const { companyId } = entryData;
+        if (!companyId) throw new Error('Se requiere companyId para registrar partida');
+
         const batch = db.batch();
         const entryRef = db.collection(ENTRIES_COLLECTION).doc();
 
@@ -21,13 +24,11 @@ class EntryModel {
         // 2. Registrar los detalles y actualizar saldos de cuentas
         for (const detail of details) {
             const detailRef = entryRef.collection('details').doc();
-            batch.set(detailRef, detail);
+            // Denormalizar companyId en detalles para facilitar reportes por collectionGroup
+            batch.set(detailRef, { ...detail, companyId });
 
-            // Actualizar el saldo de la cuenta (Simplificado por ahora)
-            // Nota: En una implementación de producción, usaríamos transacciones 
-            // para evitar race conditions en los saldos.
             const accountRef = db.collection('accounts').doc(detail.accountId);
-            const amount = detail.debit - detail.credit;
+            const amount = (Number(detail.debit) || 0) - (Number(detail.credit) || 0);
             
             batch.update(accountRef, {
                 balance: admin.firestore.FieldValue.increment(amount),
@@ -40,10 +41,14 @@ class EntryModel {
     }
 
     /**
-     * Obtiene el libro diario (partidas en orden cronológico)
+     * Obtiene el libro diario (partidas en orden cronológico) filtrado por empresa
      */
-    static async getDailyBook(startDate, endDate) {
-        let query = db.collection(ENTRIES_COLLECTION).orderBy('date', 'asc');
+    static async getDailyBook(companyId, startDate, endDate) {
+        if (!companyId) throw new Error('Se requiere companyId');
+        
+        let query = db.collection(ENTRIES_COLLECTION)
+            .where('companyId', '==', companyId)
+            .orderBy('date', 'asc');
 
         if (startDate && endDate) {
             query = query.where('date', '>=', startDate).where('date', '<=', endDate);
@@ -63,11 +68,14 @@ class EntryModel {
     }
 
     /**
-     * Obtiene el Libro Mayor de una cuenta específica
+     * Obtiene el Libro Mayor de una cuenta específica filtrado por empresa
      */
-    static async getLedgerByAccount(accountId, accountNature) {
-        // Usamos collectionGroup para buscar en todos los subcolecciones 'details' de todas las partidas
+    static async getLedgerByAccount(companyId, accountId, accountNature) {
+        if (!companyId) throw new Error('Se requiere companyId');
+
+        // Usamos collectionGroup filtrando por companyId denormalizado
         const snapshot = await db.collectionGroup('details')
+            .where('companyId', '==', companyId)
             .where('accountId', '==', accountId)
             .get();
 
@@ -76,7 +84,7 @@ class EntryModel {
         const movements = [];
         for (const doc of snapshot.docs) {
             const detailData = doc.data();
-            const entryRef = doc.ref.parent.parent; // Referencia a la partida (padre del detalle)
+            const entryRef = doc.ref.parent.parent;
             const entrySnapshot = await entryRef.get();
             const entryData = entrySnapshot.data();
 
@@ -96,7 +104,6 @@ class EntryModel {
         let runningBalance = 0;
         return movements.map(m => {
             const movement = m.debit - m.credit;
-            // Si la naturaleza es ACREEDORA, el saldo se invierte (Haber - Debe)
             runningBalance += (accountNature === 'ACREEDORA' ? -movement : movement);
             return { ...m, balance: runningBalance };
         });

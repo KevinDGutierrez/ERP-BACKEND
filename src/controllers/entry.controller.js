@@ -3,17 +3,25 @@ const EntryModel = require('../models/entry.model');
 
 const createEntry = async (req, res) => {
     try {
+        const { companyId } = req.user;
+        if (!companyId) return res.status(403).json({ message: 'No tienes una empresa asignada' });
+
         const { date, description, type, details } = req.body;
 
         if (!date || !description || !details || !Array.isArray(details)) {
             return res.status(400).json({ message: 'Datos de la partida incompletos o inválidos' });
         }
 
-        const entryId = await AccountingService.createEntry({ date, description, type }, details);
+        const entryId = await AccountingService.createEntry({ 
+            date, 
+            description, 
+            type, 
+            companyId 
+        }, details);
         
         res.status(201).json({ 
             id: entryId, 
-            message: 'Partida contable registrada y saldos actualizados exitosamente' 
+            message: 'Partida contable registrada exitosamente' 
         });
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -22,8 +30,9 @@ const createEntry = async (req, res) => {
 
 const getDailyBook = async (req, res) => {
     try {
+        const { companyId } = req.user;
         const { startDate, endDate } = req.query;
-        const entries = await EntryModel.getDailyBook(startDate, endDate);
+        const entries = await EntryModel.getDailyBook(companyId, startDate, endDate);
         res.json(entries);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -32,7 +41,8 @@ const getDailyBook = async (req, res) => {
 
 const getTrialBalance = async (req, res) => {
     try {
-        const balance = await AccountingService.getTrialBalance();
+        const { companyId } = req.user;
+        const balance = await AccountingService.getTrialBalance(companyId);
         res.json(balance);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -41,7 +51,8 @@ const getTrialBalance = async (req, res) => {
 
 const getProfitAndLoss = async (req, res) => {
     try {
-        const report = await AccountingService.getProfitAndLoss();
+        const { companyId } = req.user;
+        const report = await AccountingService.getProfitAndLoss(companyId);
         res.json(report);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -50,7 +61,8 @@ const getProfitAndLoss = async (req, res) => {
 
 const getBalanceSheet = async (req, res) => {
     try {
-        const report = await AccountingService.getBalanceSheet();
+        const { companyId } = req.user;
+        const report = await AccountingService.getBalanceSheet(companyId);
         res.json(report);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -59,22 +71,23 @@ const getBalanceSheet = async (req, res) => {
 
 const getLedger = async (req, res) => {
     try {
+        const { companyId } = req.user;
         const { accountId, accountCode } = req.query;
         let account;
 
         if (accountCode) {
             const AccountModel = require('../models/account.model');
-            account = await AccountModel.getByCode(accountCode);
+            account = await AccountModel.getByCode(accountCode, companyId);
         } else if (accountId) {
             const AccountModel = require('../models/account.model');
             account = await AccountModel.getById(accountId);
         }
 
-        if (!account) {
-            return res.status(404).json({ message: 'Cuenta no encontrada' });
+        if (!account || (account.companyId && account.companyId !== companyId)) {
+            return res.status(404).json({ message: 'Cuenta no encontrada o fuera de acceso' });
         }
 
-        const movements = await EntryModel.getLedgerByAccount(account.id, account.nature);
+        const movements = await EntryModel.getLedgerByAccount(companyId, account.id, account.nature);
         res.json({
             account: {
                 code: account.code,
@@ -90,7 +103,8 @@ const getLedger = async (req, res) => {
 
 const getAdjustedTrialBalance = async (req, res) => {
     try {
-        const balance = await AccountingService.getAdjustedTrialBalance();
+        const { companyId } = req.user;
+        const balance = await AccountingService.getAdjustedTrialBalance(companyId);
         res.json(balance);
     } catch (error) {
         res.status(500).json({ message: error.message });

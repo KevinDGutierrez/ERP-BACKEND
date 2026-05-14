@@ -4,18 +4,24 @@ const ACCOUNTS_COLLECTION = 'accounts';
 
 class AccountModel {
     /**
-     * Obtiene todas las cuentas del catálogo
+     * Obtiene todas las cuentas del catálogo filtradas por empresa
      */
-    static async getAll() {
-        const snapshot = await db.collection(ACCOUNTS_COLLECTION).orderBy('code').get();
+    static async getAll(companyId) {
+        if (!companyId) throw new Error('Se requiere companyId');
+        const snapshot = await db.collection(ACCOUNTS_COLLECTION)
+            .where('companyId', '==', companyId)
+            .orderBy('code')
+            .get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
     /**
-     * Busca una cuenta por su código
+     * Busca una cuenta por su código dentro de una empresa específica
      */
-    static async getByCode(code) {
+    static async getByCode(code, companyId) {
+        if (!companyId) throw new Error('Se requiere companyId');
         const snapshot = await db.collection(ACCOUNTS_COLLECTION)
+            .where('companyId', '==', companyId)
             .where('code', '==', code)
             .limit(1)
             .get();
@@ -34,9 +40,12 @@ class AccountModel {
     }
 
     /**
-     * Crea una nueva cuenta
+     * Crea una nueva cuenta asociada a una empresa
      */
     static async create(accountData) {
+        const { companyId } = accountData;
+        if (!companyId) throw new Error('Se requiere companyId para crear cuenta');
+        
         const docRef = await db.collection(ACCOUNTS_COLLECTION).add({
             ...accountData,
             balance: 0,

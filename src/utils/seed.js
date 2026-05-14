@@ -25,19 +25,19 @@ const INITIAL_ACCOUNTS = [
     { code: '5.2.01.04', name: 'Prestaciones Laborales', type: 'GASTO', nature: 'DEUDORA' }
 ];
 
-const seedAccounts = async () => {
-    console.log('🌱 Iniciando seed de cuentas contables...');
+const seedAccounts = async (companyId = 'master_company') => {
+    console.log(`🌱 Iniciando seed de cuentas para empresa: ${companyId}...`);
     
     try {
-        const existingAccounts = await AccountModel.getAll();
+        const existingAccounts = await AccountModel.getAll(companyId);
         
         if (existingAccounts.length > 0) {
-            console.log('⚠️ El catálogo de cuentas ya tiene datos. Omitiendo seed.');
+            console.log('⚠️ El catálogo de cuentas para esta empresa ya tiene datos. Omitiendo seed.');
             return;
         }
 
         for (const account of INITIAL_ACCOUNTS) {
-            await AccountModel.create(account);
+            await AccountModel.create({ ...account, companyId });
             console.log(`✅ Cuenta creada: ${account.code} - ${account.name}`);
         }
 
