@@ -1,16 +1,33 @@
 const admin = require('firebase-admin');
-const path = require('path');
 require('dotenv').config();
 
-const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+let serviceAccount;
 
-if (!serviceAccountPath) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_PATH is not defined in environment variables');
+if (process.env.FIREBASE_PRIVATE_KEY) {
+    // Inicializar desde variables de entorno directamente (Recomendado para Railway/Producción)
+    serviceAccount = {
+        project_id: process.env.FIREBASE_PROJECT_ID,
+        private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+    };
+    console.log('ℹ️  Initializing Firebase Admin using environment variables');
+} else if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+    // Fallback a archivo JSON (Para desarrollo local)
+    const path = require('path');
+    try {
+        serviceAccount = require(path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_PATH));
+        console.log('ℹ️  Initializing Firebase Admin using JSON file');
+    } catch (error) {
+        console.error('❌ Could not load service account JSON:', error.message);
+    }
+}
+
+if (!serviceAccount) {
+    console.error('❌ No Firebase credentials found. Set FIREBASE_PRIVATE_KEY or FIREBASE_SERVICE_ACCOUNT_PATH');
+    process.exit(1);
 }
 
 try {
-    const serviceAccount = require(path.resolve(process.cwd(), serviceAccountPath));
-
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
     });
