@@ -235,8 +235,12 @@ class AccountingService {
         const pl = await this.getProfitAndLoss(companyId);
         const utilidadNeta = pl.resumen.utilidadNeta;
 
-        // Build patrimonio array with explicit "Resultado del Ejercicio" line
-        const patrimonioAccounts = accounts.filter(a => a.type === 'PATRIMONIO' || a.type === 'CAPITAL');
+        // Build patrimonio array with explicit "Resultado del Ejercicio" line, excluding any database duplicate
+        const patrimonioAccounts = accounts.filter(a => 
+            (a.type === 'PATRIMONIO' || a.type === 'CAPITAL') &&
+            a.code !== '3.2.01.01' &&
+            a.name.toLowerCase() !== 'resultado del ejercicio'
+        );
         const patrimonioWithResult = [
             ...patrimonioAccounts,
             {
@@ -245,7 +249,7 @@ class AccountingService {
                 name: 'Resultado del Ejercicio',
                 type: 'CAPITAL',
                 nature: 'ACREEDORA',
-                balance: -utilidadNeta // Negative because acreedora nature shows as positive with Math.abs
+                balance: utilidadNeta // Positive is profit, negative is loss. Frontend will display accordingly.
             }
         ];
 
