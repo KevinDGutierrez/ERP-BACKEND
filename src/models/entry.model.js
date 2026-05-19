@@ -76,9 +76,9 @@ class EntryModel {
     }
 
     /**
-     * Obtiene el Libro Mayor de una cuenta específica filtrado por empresa
+     * Obtiene el Libro Mayor de una cuenta específica filtrado por empresa y rango de fechas
      */
-    static async getLedgerByAccount(companyId, accountId, accountNature) {
+    static async getLedgerByAccount(companyId, accountId, accountNature, startDate, endDate) {
         if (!companyId) throw new Error('Se requiere companyId');
 
         // Usamos collectionGroup filtrando por companyId denormalizado
@@ -96,9 +96,14 @@ class EntryModel {
             const entrySnapshot = await entryRef.get();
             const entryData = entrySnapshot.data();
 
+            // Filtrado por fecha
+            if (startDate && entryData.date < startDate) continue;
+            if (endDate && entryData.date > endDate) continue;
+
             movements.push({
                 date: entryData.date,
                 description: entryData.description,
+                type: entryData.type || '',
                 referenceId: entryRef.id,
                 debit: detailData.debit || 0,
                 credit: detailData.credit || 0

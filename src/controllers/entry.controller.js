@@ -76,7 +76,7 @@ const getBalanceSheet = async (req, res) => {
 const getLedger = async (req, res) => {
     try {
         const { companyId } = req.user;
-        const { accountId, accountCode } = req.query;
+        const { accountId, accountCode, startDate, endDate } = req.query;
         let account;
 
         if (accountCode) {
@@ -91,7 +91,7 @@ const getLedger = async (req, res) => {
             return res.status(404).json({ message: 'Cuenta no encontrada o fuera de acceso' });
         }
 
-        const movements = await EntryModel.getLedgerByAccount(companyId, account.id, account.nature);
+        const movements = await EntryModel.getLedgerByAccount(companyId, account.id, account.nature, startDate, endDate);
         res.json({
             account: {
                 code: account.code,

@@ -220,6 +220,27 @@ class AccountingService {
         };
     }
 
+    /**
+     * Balance de Saldos Ajustado — includes all posted adjustments
+     * (depreciaciones, provisiones, IGSS, regularización IVA, etc.)
+     * Since the system posts adjustments directly to account balances,
+     * the adjusted trial balance reflects current balances which already
+     * incorporate all adjustment entries.
+     */
+    static async getAdjustedTrialBalance(companyId) {
+        const accounts = await AccountModel.getAll(companyId);
+        // Filter only accounts that have non-zero balances (active accounts post-adjustment)
+        const activeAccounts = accounts.filter(a => a.balance !== 0);
+        return {
+            date: new Date().toISOString(),
+            accounts: activeAccounts.map(a => ({ code: a.code, name: a.name, balance: a.balance, type: a.balance >= 0 ? 'DEUDOR' : 'ACREEDOR' })),
+            totals: {
+                debe: activeAccounts.filter(a => a.balance > 0).reduce((s, a) => s + a.balance, 0),
+                haber: Math.abs(activeAccounts.filter(a => a.balance < 0).reduce((s, a) => s + a.balance, 0))
+            }
+        };
+    }
+
     static async getProfitAndLoss(companyId) {
         const accounts = await AccountModel.getAll(companyId);
         const ing = accounts.filter(a => a.code && a.code.startsWith('4.')).reduce((s, a) => s + Math.abs(a.balance), 0);
