@@ -9,6 +9,10 @@ router.get('/', companyController.listCompanies);
 // Protected routes
 router.use(authenticate);
 
+// Brand config — accessible by all company users (read) and admin_empresa (write)
+router.get('/brand', companyController.getBrand);
+router.patch('/brand', companyController.updateBrandConfig);
+
 // Admin-only company management
 router.get('/all', isAdmin, companyController.listAllCompanies);
 router.post('/', isAdmin, companyController.createCompany);

@@ -117,10 +117,68 @@ const getCompanyUsers = async (req, res) => {
     }
 };
 
+/**
+ * Get brand config for the current user's company
+ */
+const getBrand = async (req, res) => {
+    try {
+        const companyId = req.user.companyId;
+        if (!companyId) return res.status(400).json({ message: 'Usuario sin empresa asignada' });
+
+        const docSnap = await db.collection('companies').doc(companyId).get();
+        if (!docSnap.exists) return res.status(404).json({ message: 'Empresa no encontrada' });
+
+        const data = docSnap.data();
+        res.json({
+            name: data.name || '',
+            logo: data.logo || null,
+            theme: data.theme || 'dark',
+            nit: data.nit || '',
+            address: data.address || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            slogan: data.slogan || ''
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+/**
+ * Update brand config — only admin_empresa of that company
+ */
+const BRAND_FIELDS = ['name', 'logo', 'theme', 'nit', 'address', 'phone', 'email', 'slogan'];
+
+const updateBrandConfig = async (req, res) => {
+    try {
+        const companyId = req.user.companyId;
+        if (!companyId) return res.status(400).json({ message: 'Usuario sin empresa asignada' });
+
+        // Only admin_empresa or super_admin can update brand
+        if (req.user.role !== 'admin_empresa' && req.user.role !== 'super_admin') {
+            return res.status(403).json({ message: 'No tienes permisos para editar la configuración' });
+        }
+
+        // Filter to only brand-safe fields
+        const brandData = {};
+        BRAND_FIELDS.forEach(key => {
+            if (req.body[key] !== undefined) brandData[key] = req.body[key];
+        });
+        brandData.updatedAt = new Date().toISOString();
+
+        await db.collection('companies').doc(companyId).update(brandData);
+        res.json({ message: 'Configuración de marca actualizada', brand: brandData });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     listCompanies,
     listAllCompanies,
     createCompany,
     updateCompany,
-    getCompanyUsers
+    getCompanyUsers,
+    getBrand,
+    updateBrandConfig
 };
