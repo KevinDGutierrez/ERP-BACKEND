@@ -76,38 +76,46 @@ class EntryModel {
     }
 
     /**
-     * Obtiene el Libro Mayor de una cuenta específica filtrado por empresa y rango de fechas
+     * Obtiene el Libro Mayor de una cuenta específica filtrado por empresa y rango de fechas.
+     * Usa el mismo patrón que getDailyBook para evitar necesidad de índice compuesto en collectionGroup.
      */
     static async getLedgerByAccount(companyId, accountId, accountNature, startDate, endDate) {
         if (!companyId) throw new Error('Se requiere companyId');
 
-        // Usamos collectionGroup filtrando por companyId denormalizado
-        const snapshot = await db.collectionGroup('details')
+        // Obtener todas las partidas de la empresa (mismo approach que getDailyBook)
+        const entriesSnapshot = await db.collection(ENTRIES_COLLECTION)
             .where('companyId', '==', companyId)
-            .where('accountId', '==', accountId)
             .get();
 
-        if (snapshot.empty) return [];
+        if (entriesSnapshot.empty) return [];
 
         const movements = [];
-        for (const doc of snapshot.docs) {
-            const detailData = doc.data();
-            const entryRef = doc.ref.parent.parent;
-            const entrySnapshot = await entryRef.get();
-            const entryData = entrySnapshot.data();
+
+        for (const entryDoc of entriesSnapshot.docs) {
+            const entryData = entryDoc.data();
 
             // Filtrado por fecha
             if (startDate && entryData.date < startDate) continue;
             if (endDate && entryData.date > endDate) continue;
 
-            movements.push({
-                date: entryData.date,
-                description: entryData.description,
-                type: entryData.type || '',
-                referenceId: entryRef.id,
-                debit: detailData.debit || 0,
-                credit: detailData.credit || 0
-            });
+            // Obtener detalles de esta partida
+            const detailsSnapshot = await entryDoc.ref.collection('details').get();
+
+            for (const detailDoc of detailsSnapshot.docs) {
+                const detailData = detailDoc.data();
+
+                // Solo incluir movimientos de la cuenta solicitada
+                if (detailData.accountId !== accountId) continue;
+
+                movements.push({
+                    date: entryData.date,
+                    description: entryData.description,
+                    type: entryData.type || '',
+                    referenceId: entryDoc.id,
+                    debit: detailData.debit || 0,
+                    credit: detailData.credit || 0
+                });
+            }
         }
 
         // Ordenar por fecha
