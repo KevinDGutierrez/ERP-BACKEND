@@ -60,6 +60,7 @@ class AccountModel {
                 'ACTIVO': '1',
                 'PASIVO': '2',
                 'PATRIMONIO': '3',
+                'CAPITAL': '3',
                 'INGRESO': '4',
                 'COSTO': '5',
                 'GASTO': '6'
@@ -133,6 +134,7 @@ class AccountModel {
             { code: '2', name: 'PASIVO', type: 'PASIVO', nature: 'ACREEDORA', level: 1 },
             { code: '2.1', name: 'PASIVO CORRIENTE', type: 'PASIVO', nature: 'ACREEDORA', level: 2 },
             { code: '3', name: 'PATRIMONIO', type: 'PATRIMONIO', nature: 'ACREEDORA', level: 1 },
+            { code: '3.2.01.01', name: 'Resultado del Ejercicio', type: 'CAPITAL', nature: 'ACREEDORA', level: 4 },
             { code: '4', name: 'INGRESOS', type: 'INGRESO', nature: 'ACREEDORA', level: 1 },
             { code: '5', name: 'GASTOS', type: 'GASTO', nature: 'DEUDORA', level: 1 },
         ];

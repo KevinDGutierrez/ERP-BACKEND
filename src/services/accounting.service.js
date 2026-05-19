@@ -233,14 +233,33 @@ class AccountingService {
     static async getBalanceSheet(companyId) {
         const accounts = await AccountModel.getAll(companyId);
         const pl = await this.getProfitAndLoss(companyId);
+        const utilidadNeta = pl.resumen.utilidadNeta;
+
+        // Build patrimonio array with explicit "Resultado del Ejercicio" line
+        const patrimonioAccounts = accounts.filter(a => a.type === 'PATRIMONIO' || a.type === 'CAPITAL');
+        const patrimonioWithResult = [
+            ...patrimonioAccounts,
+            {
+                id: '_resultado_ejercicio',
+                code: '3.2.01.01',
+                name: 'Resultado del Ejercicio',
+                type: 'CAPITAL',
+                nature: 'ACREEDORA',
+                balance: -utilidadNeta // Negative because acreedora nature shows as positive with Math.abs
+            }
+        ];
+
+        const totalPatrimonio = patrimonioAccounts.reduce((s, a) => s + Math.abs(a.balance), 0) + utilidadNeta;
+        const totalPasivo = accounts.filter(a => a.type === 'PASIVO').reduce((s, a) => s + Math.abs(a.balance), 0);
+
         return {
             activos: accounts.filter(a => a.type === 'ACTIVO'),
             pasivos: accounts.filter(a => a.type === 'PASIVO'),
-            patrimonio: accounts.filter(a => a.type === 'PATRIMONIO'),
+            patrimonio: patrimonioWithResult,
             totales: {
                 activo: accounts.filter(a => a.type === 'ACTIVO').reduce((s, a) => s + a.balance, 0),
-                pasivo: accounts.filter(a => a.type === 'PASIVO').reduce((s, a) => s + Math.abs(a.balance), 0),
-                patrimonio: accounts.filter(a => a.type === 'PATRIMONIO').reduce((s, a) => s + Math.abs(a.balance), 0) + pl.resumen.utilidadNeta
+                pasivo: totalPasivo,
+                patrimonio: totalPasivo + totalPatrimonio
             }
         };
     }
@@ -248,6 +267,105 @@ class AccountingService {
     static async getAdjustedTrialBalance(companyId) {
         return await this.getTrialBalance(companyId);
     }
+
+    /**
+     * Dashboard Summary — returns real financial data for the dashboard
+     */
+    static async getDashboardSummary(companyId) {
+        const accounts = await AccountModel.getAll(companyId);
+        const EntryModel = require('../models/entry.model');
+
+        // Current month date range
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const endOfMonth = now.toISOString().split('T')[0];
+
+        // Totals by account type
+        const totalAssets = accounts
+            .filter(a => a.type === 'ACTIVO')
+            .reduce((s, a) => s + a.balance, 0);
+        const totalLiabilities = accounts
+            .filter(a => a.type === 'PASIVO')
+            .reduce((s, a) => s + Math.abs(a.balance), 0);
+        const totalEquityAccounts = accounts
+            .filter(a => a.type === 'PATRIMONIO' || a.type === 'CAPITAL')
+            .reduce((s, a) => s + Math.abs(a.balance), 0);
+
+        // P&L
+        const ingresos = accounts.filter(a => a.type === 'INGRESO').reduce((s, a) => s + Math.abs(a.balance), 0);
+        const costos = accounts.filter(a => a.type === 'COSTO').reduce((s, a) => s + a.balance, 0);
+        const gastos = accounts.filter(a => a.type === 'GASTO').reduce((s, a) => s + a.balance, 0);
+        const netIncome = ingresos - costos - gastos;
+        const totalEquity = totalEquityAccounts + netIncome;
+
+        // Inventory balance (look for common inventory account names)
+        const inventoryAccount = accounts.find(a =>
+            a.name && (a.name.toLowerCase().includes('inventario') || a.name.toLowerCase().includes('mercader'))
+        );
+        const inventoryBalance = inventoryAccount ? inventoryAccount.balance : 0;
+
+        // Monthly entries for sales/expenses breakdown
+        let monthlySales = 0;
+        let monthlyExpenses = 0;
+        let latestEntries = [];
+        let chartData = [];
+
+        try {
+            const entries = await EntryModel.getDailyBook(companyId, startOfMonth, endOfMonth);
+            
+            for (const entry of entries) {
+                if (entry.details) {
+                    for (const d of entry.details) {
+                        // Find the account type for each detail
+                        const acc = accounts.find(a => a.id === d.accountId);
+                        if (acc) {
+                            if (acc.type === 'INGRESO') monthlySales += (d.credit || 0);
+                            if (acc.type === 'GASTO' || acc.type === 'COSTO') monthlyExpenses += (d.debit || 0);
+                        }
+                    }
+                }
+            }
+
+            // Latest 5 entries
+            latestEntries = entries.slice(-5).reverse().map(e => ({
+                id: e.id,
+                date: e.date,
+                description: e.description,
+                type: e.type,
+                total: e.details ? e.details.reduce((s, d) => s + (d.debit || 0), 0) : 0
+            }));
+
+            // Chart data: group by day
+            const dailyMap = {};
+            for (const entry of entries) {
+                const day = entry.date;
+                if (!dailyMap[day]) dailyMap[day] = { date: day, ingresos: 0, gastos: 0 };
+                if (entry.details) {
+                    for (const d of entry.details) {
+                        const acc = accounts.find(a => a.id === d.accountId);
+                        if (acc && acc.type === 'INGRESO') dailyMap[day].ingresos += (d.credit || 0);
+                        if (acc && (acc.type === 'GASTO' || acc.type === 'COSTO')) dailyMap[day].gastos += (d.debit || 0);
+                    }
+                }
+            }
+            chartData = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
+        } catch (err) {
+            console.error('Dashboard chart data error:', err.message);
+        }
+
+        return {
+            totalAssets,
+            totalLiabilities,
+            totalEquity,
+            monthlySales,
+            monthlyExpenses,
+            netIncome,
+            inventoryBalance,
+            latestEntries,
+            chartData
+        };
+    }
 }
 
 module.exports = AccountingService;
+

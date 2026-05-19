@@ -17,6 +17,7 @@ const INITIAL_ACCOUNTS = [
     { code: '2.1.03.01', name: 'IGSS por Pagar', type: 'PASIVO', nature: 'ACREEDORA' },
     { code: '2.1.04.01', name: 'Provisiones por Pagar', type: 'PASIVO', nature: 'ACREEDORA' },
     { code: '3.1.01.01', name: 'Capital Social', type: 'PATRIMONIO', nature: 'ACREEDORA' },
+    { code: '3.2.01.01', name: 'Resultado del Ejercicio', type: 'CAPITAL', nature: 'ACREEDORA' },
     { code: '4.1.01.01', name: 'Ventas', type: 'INGRESO', nature: 'ACREEDORA' },
     { code: '5.1.01.01', name: 'Costo de Ventas', type: 'GASTO', nature: 'DEUDORA' },
     { code: '5.2.01.01', name: 'Sueldos y Salarios', type: 'GASTO', nature: 'DEUDORA' },
