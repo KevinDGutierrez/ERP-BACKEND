@@ -24,7 +24,16 @@ const listCompanies = async (req, res) => {
 const listAllCompanies = async (req, res) => {
     try {
         const snapshot = await db.collection('companies').get();
-        const companies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const companies = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                // Convert Firestore Timestamps to ISO strings
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || null,
+                updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt || null
+            };
+        });
         res.json({ companies });
     } catch (error) {
         res.status(500).json({ message: error.message });
