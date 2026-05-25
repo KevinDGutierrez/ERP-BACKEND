@@ -57,8 +57,8 @@ class EntryModel {
             const data = docSnap.data();
             
             // Filtrado manual por fecha en memoria
-            if (startDate && data.date < startDate) continue;
-            if (endDate && data.date > endDate) continue;
+            if (startDate && new Date(data.date) < new Date(startDate)) continue;
+            if (endDate && new Date(data.date) > new Date(endDate)) continue;
 
             const detailsSnapshot = await docSnap.ref.collection('details').get();
             const details = detailsSnapshot.docs.map(d => d.data());
@@ -67,9 +67,12 @@ class EntryModel {
 
         // Ordenar por fecha ascendentemente en memoria
         entries.sort((a, b) => {
-            if (a.date < b.date) return -1;
-            if (a.date > b.date) return 1;
-            return 0;
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (dateA !== dateB) {
+                return dateA - dateB;
+            }
+            return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
         });
 
         return entries;
@@ -95,8 +98,8 @@ class EntryModel {
             const entryData = entryDoc.data();
 
             // Filtrado por fecha
-            if (startDate && entryData.date < startDate) continue;
-            if (endDate && entryData.date > endDate) continue;
+            if (startDate && new Date(entryData.date) < new Date(startDate)) continue;
+            if (endDate && new Date(entryData.date) > new Date(endDate)) continue;
 
             // Obtener detalles de esta partida
             const detailsSnapshot = await entryDoc.ref.collection('details').get();
@@ -109,6 +112,7 @@ class EntryModel {
 
                 movements.push({
                     date: entryData.date,
+                    createdAt: entryData.createdAt,
                     description: entryData.description,
                     type: entryData.type || '',
                     referenceId: entryDoc.id,
@@ -119,7 +123,14 @@ class EntryModel {
         }
 
         // Ordenar por fecha
-        movements.sort((a, b) => new Date(a.date) - new Date(b.date));
+        movements.sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (dateA !== dateB) {
+                return dateA - dateB;
+            }
+            return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        });
 
         // Calcular saldo acumulado
         let runningBalance = 0;
