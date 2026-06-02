@@ -13,6 +13,10 @@ router.use(authenticate);
 router.get('/brand', companyController.getBrand);
 router.patch('/brand', companyController.updateBrandConfig);
 
+// Company reset request
+router.post('/:id/request-reset', companyController.requestReset);
+router.get('/:id/reset-status', companyController.getResetStatus);
+
 // Admin-only company management
 router.get('/all', isAdmin, companyController.listAllCompanies);
 router.post('/', isAdmin, companyController.createCompany);

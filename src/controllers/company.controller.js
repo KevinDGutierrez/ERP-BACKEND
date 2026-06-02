@@ -173,6 +173,74 @@ const updateBrandConfig = async (req, res) => {
     }
 };
 
+/**
+ * Request to reset ERP for a company (Admin Empresa only)
+ */
+const requestReset = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        
+        // Ensure only admin_empresa for this exact company can request this
+        if (req.user.role !== 'admin_empresa' || req.user.companyId !== id) {
+            return res.status(403).json({ message: 'No tienes permisos para reiniciar esta empresa' });
+        }
+
+        // Check if there is already a PENDING request
+        const existingSnapshot = await db.collection('reset_requests')
+            .where('companyId', '==', id)
+            .where('status', '==', 'PENDING')
+            .get();
+
+        if (!existingSnapshot.empty) {
+            return res.status(400).json({ message: 'Ya existe una solicitud pendiente de aprobación para esta empresa.' });
+        }
+
+        const companySnap = await db.collection('companies').doc(id).get();
+        if (!companySnap.exists) {
+            return res.status(404).json({ message: 'Empresa no encontrada' });
+        }
+        
+        const companyData = companySnap.data();
+
+        const requestDoc = {
+            companyId: id,
+            companyName: companyData.name,
+            requestedBy: req.user.uid,
+            requestedByEmail: req.user.email || '',
+            reason: reason || '',
+            status: 'PENDING',
+            createdAt: new Date().toISOString()
+        };
+
+        await db.collection('reset_requests').add(requestDoc);
+
+        res.status(201).json({ message: 'Solicitud enviada exitosamente.' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const getResetStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (req.user.role !== 'admin_empresa' || req.user.companyId !== id) {
+            return res.status(403).json({ message: 'No tienes permisos' });
+        }
+        const existingSnapshot = await db.collection('reset_requests')
+            .where('companyId', '==', id)
+            .where('status', '==', 'PENDING')
+            .get();
+            
+        if (!existingSnapshot.empty) {
+            return res.json({ status: 'PENDING' });
+        }
+        return res.json({ status: 'NONE' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     listCompanies,
     listAllCompanies,
@@ -180,5 +248,7 @@ module.exports = {
     updateCompany,
     getCompanyUsers,
     getBrand,
-    updateBrandConfig
+    updateBrandConfig,
+    requestReset,
+    getResetStatus
 };

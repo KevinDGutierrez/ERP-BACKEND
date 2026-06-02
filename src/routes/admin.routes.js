@@ -10,4 +10,8 @@ router.get('/users', adminController.getUsers);
 router.patch('/users/:uid/approve', adminController.approveUser);
 router.post('/users/:uid/reject', adminController.rejectUser);
 
+router.get('/reset-requests', adminController.getResetRequests);
+router.post('/reset-requests/:id/approve', adminController.approveResetRequest);
+router.post('/reset-requests/:id/reject', adminController.rejectResetRequest);
+
 module.exports = router;
