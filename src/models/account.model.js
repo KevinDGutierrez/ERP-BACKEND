@@ -68,16 +68,15 @@ class AccountModel {
             parentCode = baseCodes[type.toUpperCase().replace(/S$/, '')] || '9';
         }
 
-        // Buscar cuentas que cuelguen directamente de este padre
+        // Buscar cuentas de la empresa para evitar el error de índice compuesto de Firestore
         const snapshot = await db.collection(ACCOUNTS_COLLECTION)
             .where('companyId', '==', companyId)
-            .where('code', '>=', parentCode + '.')
-            .where('code', '<', parentCode + '.\uf8ff')
             .get();
 
         const siblings = snapshot.docs
             .map(doc => doc.data().code)
             .filter(code => {
+                if (!code || !code.startsWith(parentCode + '.')) return false;
                 const parentSegments = parentCode.split('.').length;
                 const segments = code.split('.').length;
                 return segments === parentSegments + 1;
