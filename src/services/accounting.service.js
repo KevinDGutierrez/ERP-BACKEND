@@ -243,9 +243,9 @@ class AccountingService {
 
     static async getProfitAndLoss(companyId) {
         const accounts = await AccountModel.getAll(companyId);
-        const ing = accounts.filter(a => a.code && a.code.startsWith('4.')).reduce((s, a) => s + Math.abs(a.balance), 0);
-        const cos = accounts.filter(a => a.code && a.code.startsWith('5.1.')).reduce((s, a) => s + a.balance, 0);
-        const gas = accounts.filter(a => a.code && a.code.startsWith('5.2.')).reduce((s, a) => s + a.balance, 0);
+        const ing = accounts.filter(a => a.type === 'INGRESO').reduce((s, a) => s - a.balance, 0);
+        const cos = accounts.filter(a => a.type === 'COSTO').reduce((s, a) => s + a.balance, 0);
+        const gas = accounts.filter(a => a.type === 'GASTO').reduce((s, a) => s + a.balance, 0);
         return {
             resumen: { totalIngresos: ing, totalCostos: cos, totalGastos: gas, utilidadBruta: ing - cos, utilidadNeta: ing - cos - gas }
         };
@@ -317,9 +317,9 @@ class AccountingService {
             .reduce((s, a) => s - a.balance, 0);
 
         // P&L
-        const ingresos = accounts.filter(a => a.code && a.code.startsWith('4.')).reduce((s, a) => s + Math.abs(a.balance), 0);
-        const costos = accounts.filter(a => a.code && a.code.startsWith('5.1.')).reduce((s, a) => s + a.balance, 0);
-        const gastos = accounts.filter(a => a.code && a.code.startsWith('5.2.')).reduce((s, a) => s + a.balance, 0);
+        const ingresos = accounts.filter(a => a.type === 'INGRESO').reduce((s, a) => s - a.balance, 0);
+        const costos = accounts.filter(a => a.type === 'COSTO').reduce((s, a) => s + a.balance, 0);
+        const gastos = accounts.filter(a => a.type === 'GASTO').reduce((s, a) => s + a.balance, 0);
         const netIncome = ingresos - costos - gastos;
         const totalEquity = totalEquityAccounts + netIncome;
 
@@ -344,8 +344,8 @@ class AccountingService {
                         // Find the account type for each detail
                         const acc = accounts.find(a => a.id === d.accountId);
                         if (acc) {
-                            if (acc.code && acc.code.startsWith('4.')) monthlySales += (d.credit || 0);
-                            if (acc.code && (acc.code.startsWith('5.1.') || acc.code.startsWith('5.2.'))) monthlyExpenses += (d.debit || 0);
+                            if (acc.type === 'INGRESO') monthlySales += (d.credit || 0);
+                            if (acc.type === 'COSTO' || acc.type === 'GASTO') monthlyExpenses += (d.debit || 0);
                         }
                     }
                 }
@@ -368,8 +368,8 @@ class AccountingService {
                 if (entry.details) {
                     for (const d of entry.details) {
                         const acc = accounts.find(a => a.id === d.accountId);
-                        if (acc && acc.code && acc.code.startsWith('4.')) dailyMap[day].ingresos += (d.credit || 0);
-                        if (acc && acc.code && (acc.code.startsWith('5.1.') || acc.code.startsWith('5.2.'))) dailyMap[day].gastos += (d.debit || 0);
+                        if (acc && acc.type === 'INGRESO') dailyMap[day].ingresos += (d.credit || 0);
+                        if (acc && (acc.type === 'COSTO' || acc.type === 'GASTO')) dailyMap[day].gastos += (d.debit || 0);
                     }
                 }
             }
