@@ -134,27 +134,34 @@ const seedAccounts = async (companyId) => {
     
     try {
         const existingAccounts = await AccountModel.getAll(companyId);
-        // Crear un mapa de códigos existentes para optimizar la búsqueda
+        // Crear mapas de códigos y nombres existentes para idempotencia doble
         const existingCodes = new Set(existingAccounts.map(acc => acc.code));
+        const existingNames = new Set(existingAccounts.map(acc => (acc.name || '').toLowerCase().trim()));
         
         let createdCount = 0;
+        let skippedCount = 0;
 
         for (const account of INITIAL_ACCOUNTS) {
-            // Regla de Idempotencia: Verificar por companyId + code (que acabamos de precargar en el set)
+            // Idempotencia: Verificar por código O por nombre
             if (existingCodes.has(account.code)) {
-                // Cuenta ya existe, se omite
+                skippedCount++;
+                continue;
+            }
+            if (existingNames.has(account.name.toLowerCase().trim())) {
+                skippedCount++;
                 continue;
             }
 
-            // Si no existe, se crea con balance 0
+            // Si no existe ni por código ni por nombre, crear con balance 0
             await AccountModel.create({ ...account, companyId, balance: 0 });
             createdCount++;
         }
 
-        console.log(`🏁 Seed completado exitosamente para ${companyId}. Cuentas nuevas creadas: ${createdCount}`);
+        console.log(`🏁 Seed completado para ${companyId}. Nuevas: ${createdCount}, Omitidas: ${skippedCount}`);
     } catch (error) {
         console.error('❌ Error en el seed:', error.message);
     }
 };
 
 module.exports = seedAccounts;
+
