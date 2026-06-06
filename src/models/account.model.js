@@ -55,7 +55,6 @@ class AccountModel {
             const parent = await this.getById(parentId);
             if (parent) parentCode = parent.code;
         } else {
-            // Códigos base por tipo
             const baseCodes = {
                 'ACTIVO': '1',
                 'PASIVO': '2',
@@ -65,6 +64,7 @@ class AccountModel {
                 'COSTO': '5',
                 'GASTO': '6'
             };
+            if (!type) throw new Error('El tipo de cuenta es requerido para generar código automáticamente');
             parentCode = baseCodes[type.toUpperCase().replace(/S$/, '')] || '9';
         }
 
@@ -122,36 +122,9 @@ class AccountModel {
         return docRef.id;
     }
 
-    /**
-     * Semilla de catálogo base para nuevas empresas
-     */
     static async seed(companyId) {
-        const defaultAccounts = [
-            { code: '1', name: 'ACTIVO', type: 'ACTIVO', nature: 'DEUDORA', level: 1 },
-            { code: '1.1', name: 'ACTIVO CORRIENTE', type: 'ACTIVO', nature: 'DEUDORA', level: 2 },
-            { code: '1.1.01', name: 'Caja y Bancos', type: 'ACTIVO', nature: 'DEUDORA', level: 3 },
-            { code: '1.1.01.01', name: 'Caja General', type: 'ACTIVO', nature: 'DEUDORA', level: 4 },
-            { code: '2', name: 'PASIVO', type: 'PASIVO', nature: 'ACREEDORA', level: 1 },
-            { code: '2.1', name: 'PASIVO CORRIENTE', type: 'PASIVO', nature: 'ACREEDORA', level: 2 },
-            { code: '3', name: 'PATRIMONIO', type: 'PATRIMONIO', nature: 'ACREEDORA', level: 1 },
-            { code: '3.2.01.01', name: 'Resultado del Ejercicio', type: 'CAPITAL', nature: 'ACREEDORA', level: 4 },
-            { code: '4', name: 'INGRESOS', type: 'INGRESO', nature: 'ACREEDORA', level: 1 },
-            { code: '5', name: 'GASTOS', type: 'GASTO', nature: 'DEUDORA', level: 1 },
-        ];
-
-        const batch = db.batch();
-        defaultAccounts.forEach(acc => {
-            const ref = db.collection(ACCOUNTS_COLLECTION).doc();
-            batch.set(ref, {
-                ...acc,
-                companyId,
-                balance: 0,
-                createdAt: new Date().toISOString()
-            });
-        });
-
-        await batch.commit();
-        return true;
+        const seedAccounts = require('../utils/seed');
+        return await seedAccounts(companyId);
     }
 }
 

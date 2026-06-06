@@ -274,8 +274,8 @@ class AccountingService {
             }
         ];
 
-        const totalPatrimonio = patrimonioAccounts.reduce((s, a) => s + Math.abs(a.balance), 0) + utilidadNeta;
-        const totalPasivo = accounts.filter(a => a.type === 'PASIVO').reduce((s, a) => s + Math.abs(a.balance), 0);
+        const totalPatrimonio = patrimonioAccounts.reduce((s, a) => s - a.balance, 0) + utilidadNeta;
+        const totalPasivo = accounts.filter(a => a.type === 'PASIVO').reduce((s, a) => s - a.balance, 0);
 
         return {
             activos: accounts.filter(a => a.type === 'ACTIVO'),
@@ -311,10 +311,10 @@ class AccountingService {
             .reduce((s, a) => s + a.balance, 0);
         const totalLiabilities = accounts
             .filter(a => a.type === 'PASIVO')
-            .reduce((s, a) => s + Math.abs(a.balance), 0);
+            .reduce((s, a) => s - a.balance, 0);
         const totalEquityAccounts = accounts
             .filter(a => a.type === 'PATRIMONIO' || a.type === 'CAPITAL')
-            .reduce((s, a) => s + Math.abs(a.balance), 0);
+            .reduce((s, a) => s - a.balance, 0);
 
         // P&L
         const ingresos = accounts.filter(a => a.code && a.code.startsWith('4.')).reduce((s, a) => s + Math.abs(a.balance), 0);

@@ -37,17 +37,10 @@ const approveUser = async (req, res) => {
             isNewCompany = true;
         }
 
-        // Si es una empresa nueva o existente sin cuentas, sembrar el catálogo
+        // Si es una empresa nueva o existente, sembrar el catálogo de forma idempotente
         if (finalCompanyId) {
-            const accountsSnapshot = await db.collection('accounts')
-                .where('companyId', '==', finalCompanyId)
-                .limit(1)
-                .get();
-            
-            if (accountsSnapshot.empty) {
-                console.log(`Sembrando catálogo de cuentas para la empresa: ${finalCompanyId}`);
-                await AccountModel.seed(finalCompanyId);
-            }
+            console.log(`Verificando y sembrando catálogo de cuentas para la empresa: ${finalCompanyId}`);
+            await AccountModel.seed(finalCompanyId);
         }
 
         await db.collection('users').doc(uid).update({
