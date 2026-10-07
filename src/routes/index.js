@@ -8,6 +8,7 @@ const adminRoutes = require('./admin.routes');
 const accountingRoutes = require('./accounting.routes');
 const companyRoutes = require('./company.routes');
 const dashboardRoutes = require('./dashboard.routes');
+const costAnalysisRoutes = require('./costAnalysis.routes');
 const { authenticate } = require('../middlewares/auth.middleware');
 
 // Rutas públicas
@@ -22,6 +23,7 @@ router.use('/entries', entryRoutes);
 router.use('/transactions', transactionRoutes);
 router.use('/accounting', accountingRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/cost-analysis', costAnalysisRoutes);
 
 // Rutas administrativas (Super Admin)
 router.use('/admin', adminRoutes);
